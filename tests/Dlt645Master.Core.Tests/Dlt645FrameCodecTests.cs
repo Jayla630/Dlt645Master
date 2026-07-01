@@ -1,3 +1,4 @@
+using Dlt645Master.Core.Configuration;
 using Dlt645Master.Core.Protocol;
 using FluentAssertions;
 using Xunit;
@@ -71,5 +72,39 @@ public class Dlt645FrameCodecTests
         decimal value = Dlt645FrameCodec.BcdToDecimal(displayOrderBytes, decimalPlaces: 2);
 
         value.Should().Be(1.86m);
+    }
+
+    [Fact]
+    public void DecimalToBcd_IsInverseOfBcdToDecimal()
+    {
+        byte[] bcd = Dlt645FrameCodec.DecimalToBcd(1.86m, byteLength: 4, decimalPlaces: 2);
+
+        bcd.Should().Equal(0x00, 0x00, 0x01, 0x86);
+    }
+
+    [Fact]
+    public void DecimalToBcd_ZeroValue_ReturnsAllZeroBytes()
+    {
+        byte[] bcd = Dlt645FrameCodec.DecimalToBcd(0.00m, byteLength: 4, decimalPlaces: 2);
+
+        bcd.Should().Equal(0x00, 0x00, 0x00, 0x00);
+    }
+
+    [Fact]
+    public void BuildReadResponse_ForwardActiveEnergyGoldenVector_MatchesKnownGoodFrame()
+    {
+        // 应答帧地址段（线序）应为 01 72 00 72 00 00；BuildReadResponse 的 address 入参是显示序，
+        // 因此这里先按显示序还原（ReverseBytes 互为逆操作）。
+        byte[] displayAddress = Dlt645FrameCodec.ReverseBytes([0x01, 0x72, 0x00, 0x72, 0x00, 0x00]);
+
+        byte[] frame = Dlt645FrameCodec.BuildReadResponse(
+            displayAddress,
+            DataItemCatalog.ForwardActiveEnergy.DataId,
+            0.00m,
+            DataItemCatalog.ForwardActiveEnergy);
+
+        frame.Should().Equal(
+            0x68, 0x01, 0x72, 0x00, 0x72, 0x00, 0x00, 0x68, 0x91, 0x08,
+            0x33, 0x33, 0x34, 0x33, 0x33, 0x33, 0x33, 0x33, 0xE7, 0x16);
     }
 }
