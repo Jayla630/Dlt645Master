@@ -1,10 +1,9 @@
 namespace Dlt645Master.Core.Models;
 
 /// <summary>
-/// Result of parsing one DL/T645 frame. On checksum failure only <see cref="ErrorMessage"/> is
-/// populated, since a bad checksum means no field in the frame can be trusted. On a recognized
-/// abnormal response (control code 0xD1) or an unrecognized data identifier, the frame-level
-/// fields (ControlCode/Address/DataId) are still trustworthy even though IsSuccess is false.
+/// 解析一条 DL/T645 帧的结果。校验和失败时只会填充 <see cref="ErrorMessage"/>，
+/// 因为校验和错误意味着帧内任何字段都不可信。若是已识别的异常应答（控制码 0xD1）
+/// 或未识别的数据标识，即使 IsSuccess 为 false，帧级字段（ControlCode/Address/DataId）仍然可信。
 /// </summary>
 public sealed class MeterReadResult
 {
@@ -12,10 +11,10 @@ public sealed class MeterReadResult
 
     public byte? ControlCode { get; init; }
 
-    /// <summary>6-byte meter address, display/big-endian order.</summary>
+    /// <summary>6 字节电表地址，显示/高位在前序。</summary>
     public byte[]? Address { get; init; }
 
-    /// <summary>DI3 DI2 DI1 DI0, display/big-endian order.</summary>
+    /// <summary>DI3 DI2 DI1 DI0，显示/高位在前序。</summary>
     public byte[]? DataId { get; init; }
 
     public string? ItemName { get; init; }

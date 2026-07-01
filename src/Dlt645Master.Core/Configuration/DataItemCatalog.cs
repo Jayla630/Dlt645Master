@@ -3,10 +3,9 @@ using Dlt645Master.Core.Models;
 namespace Dlt645Master.Core.Configuration;
 
 /// <summary>
-/// Centralized, maintainable table of supported DL/T645-2007 data identifiers.
-/// TODO: values below are initial best-effort transcriptions of Appendix A.2 (data identifier
-/// encoding table). Verify every row against the official standard text before relying on this
-/// for a real meter; where this table and the standard disagree, the standard wins.
+/// 集中维护的、已支持的 DL/T645-2007 数据标识表。
+/// TODO：以下数值是对附录 A.2（数据标识编码表）的初始尽力转录。
+/// 对接真表前请逐行核对官方标准原文；本表与标准不一致时，以标准为准。
 /// </summary>
 public static class DataItemCatalog
 {
@@ -137,7 +136,7 @@ public static class DataItemCatalog
         GridFrequency,
     ];
 
-    /// <summary>Looks up a definition by its DI3 DI2 DI1 DI0 bytes (display/big-endian order).</summary>
+    /// <summary>按 DI3 DI2 DI1 DI0 字节（显示/高位在前序）查找对应定义。</summary>
     public static DataItemDefinition? Find(ReadOnlySpan<byte> dataId)
     {
         foreach (DataItemDefinition item in All)

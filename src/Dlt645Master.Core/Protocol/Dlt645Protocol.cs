@@ -4,8 +4,8 @@ using Dlt645Master.Core.Models;
 namespace Dlt645Master.Core.Protocol;
 
 /// <summary>
-/// DL/T645-2007 "read data" request/response codec. Pure byte[] &lt;-&gt; model logic only;
-/// no serial port or UI concerns. See Dlt645FrameCodec for the underlying byte-level transforms.
+/// DL/T645-2007「读数据」请求/应答编解码器。只做纯粹的 byte[] &lt;-&gt; 模型逻辑，
+/// 不涉及串口或 UI。底层字节级变换见 Dlt645FrameCodec。
 /// </summary>
 public sealed class Dlt645Protocol : IMeterProtocol
 {
@@ -20,7 +20,7 @@ public sealed class Dlt645Protocol : IMeterProtocol
     private const int AddressLength = 6;
     private const int DataIdLength = 4;
 
-    /// <summary>Every meter accepts this address; used to read from a single meter on a bus with only one device attached.</summary>
+    /// <summary>所有电表都会响应该地址；用于总线上只挂一台设备时的单表读取。</summary>
     public static readonly byte[] BroadcastAddress = [0xAA, 0xAA, 0xAA, 0xAA, 0xAA, 0xAA];
 
     public byte[] BuildReadRequest(byte[] address, byte[] dataId)
@@ -35,13 +35,13 @@ public sealed class Dlt645Protocol : IMeterProtocol
             throw new ArgumentException($"数据标识必须是 {DataIdLength} 字节。", nameof(dataId));
         }
 
-        // Address and DI are conventionally documented/typed high-byte-first (display order), but
-        // DL/T645 transmits every multi-byte field low-byte-first on the wire - reverse before framing.
+        // 地址与数据标识按惯例以高位在前（显示序）书写/录入，但 DL/T645 在线上传输时
+        // 所有多字节字段一律低位在前——组帧前需先反转字节序。
         byte[] wireAddress = Dlt645FrameCodec.ReverseBytes(address);
         byte[] wireDataId = Dlt645FrameCodec.ReverseBytes(dataId);
 
-        // +0x33 on every DATA byte is a DL/T645 wire-encoding quirk: it guarantees DATA content can
-        // never collide with the 0x68/0x16 bytes that frame the message, even for all-zero data.
+        // 每个 DATA 字节 +0x33 是 DL/T645 的线上编码规则：即使数据内容全为 0，
+        // 也能保证 DATA 不会与帧定界符 0x68/0x16 冲突。
         byte[] data = Dlt645FrameCodec.Add33H(wireDataId);
 
         byte[] body = new byte[1 + AddressLength + 1 + 1 + 1 + data.Length];
@@ -54,8 +54,8 @@ public sealed class Dlt645Protocol : IMeterProtocol
         body[i++] = (byte)data.Length;
         Array.Copy(data, 0, body, i, data.Length);
 
-        // CS = arithmetic sum of every byte from the first 0x68 through the last DATA byte, mod 256
-        // (i.e. exactly `body`) - it does NOT cover itself or the trailing 0x16.
+        // CS = 从第一个 0x68 到最后一个 DATA 字节的所有字节算术和，对 256 取模
+        // （即正好是 `body`）——不包含 CS 自身与末尾的 0x16。
         byte checksum = Dlt645FrameCodec.ComputeChecksum(body);
 
         byte[] frame = new byte[body.Length + 2];
@@ -72,14 +72,14 @@ public sealed class Dlt645Protocol : IMeterProtocol
             return MeterReadResult.Failure("空报文");
         }
 
-        // An optional wake-up preamble (repeated 0xFE) may precede the real frame; skip it.
+        // 真正的帧之前可能存在可选的唤醒前导码（重复的 0xFE），需先跳过。
         int start = 0;
         while (start < frame.Length && frame[start] == WakeupPreambleByte)
         {
             start++;
         }
 
-        const int minimumFrameLength = 1 + AddressLength + 1 + 1 + 1 + 1 + 1; // 68 addr(6) 68 C L CS 16, L=0
+        const int minimumFrameLength = 1 + AddressLength + 1 + 1 + 1 + 1 + 1; // 68 地址(6) 68 C L CS 16，L=0 时的长度
         if (frame.Length - start < minimumFrameLength)
         {
             return MeterReadResult.Failure("报文长度不足");
@@ -116,9 +116,8 @@ public sealed class Dlt645Protocol : IMeterProtocol
             return MeterReadResult.Failure($"结束符错误，期望 0x16，实际 0x{endByte:X2}");
         }
 
-        // Recompute CS over [first 0x68 .. last DATA byte] and verify before trusting anything else -
-        // a checksum mismatch means the whole frame (address included) may be corrupted, so no field
-        // from a failed frame is surfaced in the result.
+        // 在信任其他字段之前，先在 [第一个 0x68 .. 最后一个 DATA 字节] 范围内重新计算 CS 并校验——
+        // 校验和不匹配意味着整帧（含地址）都可能已损坏，因此失败帧的任何字段都不会出现在结果中。
         byte[] bytesForChecksum = frame[start..(dataStart + length)];
         byte expectedChecksum = Dlt645FrameCodec.ComputeChecksum(bytesForChecksum);
         if (checksumByte != expectedChecksum)
