@@ -2,8 +2,10 @@
   <Folder Name="/src/">
     <Project Path="src/Dlt645Master.App/Dlt645Master.App.csproj" />
     <Project Path="src/Dlt645Master.Core/Dlt645Master.Core.csproj" />
+    <Project Path="src/Dlt645Master.Transport/Dlt645Master.Transport.csproj" />
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/Dlt645Master.Core.Tests/Dlt645Master.Core.Tests.csproj" />
+    <Project Path="tests/Dlt645Master.Transport.Tests/Dlt645Master.Transport.Tests.csproj" />
   </Folder>
 </Solution>
