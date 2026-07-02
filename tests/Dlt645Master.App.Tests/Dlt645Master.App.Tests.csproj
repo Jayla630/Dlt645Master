@@ -1,8 +1,8 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <!-- 视图模型引用 Prism/WPF 类型，测试项目须与 App 同为 net8.0-windows 且启用 WPF。 -->
-    <TargetFramework>net8.0-windows</TargetFramework>
+    <!-- 视图模型引用 Prism/WPF 类型，测试项目须与 App 同 TFM 且启用 WPF（slice-05 起随 App 指定 Win10 平台版本）。 -->
+    <TargetFramework>net8.0-windows10.0.19041.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <UseWPF>true</UseWPF>

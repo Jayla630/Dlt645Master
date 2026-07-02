@@ -6,8 +6,13 @@ using Dlt645Master.Core.Configuration;
 using Dlt645Master.Core.Models;
 using Dlt645Master.Core.Services;
 using Dlt645Master.Core.Transport;
+using LiveChartsCore;
+using LiveChartsCore.SkiaSharpView;
+using LiveChartsCore.SkiaSharpView.Painting;
+using LiveChartsCore.SkiaSharpView.Painting.Effects;
 using Prism.Commands;
 using Prism.Mvvm;
+using SkiaSharp;
 
 namespace Dlt645Master.App.ViewModels;
 
@@ -22,7 +27,22 @@ public sealed class MainWindowViewModel : BindableBase, IDisposable
     /// <summary>报文监视条目上限，超出后移除最旧。</summary>
     public const int MaxFrameLogEntries = 500;
 
+    /// <summary>电压趋势图滚动窗口点数：1 秒轮询 ≈ 最近 2 分钟。</summary>
+    public const int MaxVoltagePoints = 120;
+
+    /// <summary>电压上限警戒值（V），图表画红色水平参考线。</summary>
+    public const double VoltageAlarmLimit = 250;
+
     private static readonly TimeSpan ReadOnceTimeout = TimeSpan.FromMilliseconds(800);
+
+    // ---- 图表配色（SkiaSharp 侧无法引用 WPF 资源字典，此处按 DarkTheme.xaml 令牌值镜像；相色遵循
+    // 电力行业 A 黄 / B 绿 / C 红 惯例，警戒线用状态红 + 虚线与 C 相实线区分）----
+    private static readonly SKColor PhaseAColor = SKColor.Parse("#EAB308");
+    private static readonly SKColor PhaseBColor = SKColor.Parse("#16A34A");
+    private static readonly SKColor PhaseCColor = SKColor.Parse("#F87171");
+    private static readonly SKColor AlarmColor = SKColor.Parse("#DC2626");
+    private static readonly SKColor AxisTextColor = SKColor.Parse("#9CA3AF");
+    private static readonly SKColor SeparatorColor = SKColor.Parse("#374151");
 
     private readonly ITransport _transport;
     private readonly IMeterPollingService _service;
@@ -47,10 +67,73 @@ public sealed class MainWindowViewModel : BindableBase, IDisposable
             DataItems.Add(option);
         }
 
+        VoltageSeries =
+        [
+            CreateVoltageLineSeries("A 相电压", _voltagePointsA, PhaseAColor),
+            CreateVoltageLineSeries("B 相电压", _voltagePointsB, PhaseBColor),
+            CreateVoltageLineSeries("C 相电压", _voltagePointsC, PhaseCColor),
+        ];
+
+        VoltageXAxes =
+        [
+            // 滚动窗口的横轴是「最近 N 次采样」，绝对刻度无意义：labeler 返回空串（不受主题默认画笔影响）、
+            // 关闭分隔线，只留一条干净的时间推进轴。
+            new Axis
+            {
+                Labeler = _ => string.Empty,
+                ShowSeparatorLines = false,
+                SeparatorsPaint = null,
+                TicksPaint = null,
+                SubticksPaint = null,
+            },
+        ];
+
+        VoltageYAxes =
+        [
+            // 固定量程 180~260V，250V 红色警戒线才有稳定的视觉位置；自定义分隔线让 250 刻度有标签。
+            new Axis
+            {
+                MinLimit = 180,
+                MaxLimit = 260,
+                CustomSeparators = [180, 200, 220, 240, VoltageAlarmLimit, 260],
+                LabelsPaint = new SolidColorPaint(AxisTextColor),
+                SeparatorsPaint = new SolidColorPaint(SeparatorColor) { StrokeThickness = 1 },
+                TextSize = 12,
+            },
+        ];
+
+        VoltageSections =
+        [
+            new RectangularSection
+            {
+                Yi = VoltageAlarmLimit,
+                Yj = VoltageAlarmLimit,
+                Stroke = new SolidColorPaint(AlarmColor)
+                {
+                    StrokeThickness = 2,
+                    PathEffect = new DashEffect([8f, 6f]),
+                },
+            },
+        ];
+
         _service.ReadCompleted += OnReadCompleted;
         _service.FrameTransferred += OnFrameTransferred;
         _service.StatisticsChanged += OnStatisticsChanged;
     }
+
+    /// <summary>三相电压趋势线的统一外观：细实线、无点标记、不平滑、关动画（工业上位机风格 + 降刷新开销）。</summary>
+    private static LineSeries<double> CreateVoltageLineSeries(string name, ObservableCollection<double> values, SKColor color) => new()
+    {
+        Name = name,
+        Values = values,
+        Stroke = new SolidColorPaint(color) { StrokeThickness = 2 },
+        Fill = null,
+        GeometrySize = 0,
+        GeometryFill = null,
+        GeometryStroke = null,
+        LineSmoothness = 0,
+        AnimationsSpeed = TimeSpan.Zero,
+    };
 
     // ---- 绑定状态属性 ----
 
@@ -151,6 +234,30 @@ public sealed class MainWindowViewModel : BindableBase, IDisposable
 
     /// <summary>报文监视条目，上限 <see cref="MaxFrameLogEntries"/> 条，满则移除最旧。</summary>
     public ObservableCollection<FrameLogEntry> FrameLog { get; } = [];
+
+    // ---- 三相电压趋势图（LiveCharts2）----
+    // 三条曲线各挂一个 ObservableCollection<double> 滚动缓冲；缓冲只在 IUiDispatcher 调度后的界面线程上增删
+    // （LiveCharts2 在 WPF 下从后台线程改序列数据会随机渲染异常甚至崩溃）。
+
+    private readonly ObservableCollection<double> _voltagePointsA = [];
+    private readonly ObservableCollection<double> _voltagePointsB = [];
+    private readonly ObservableCollection<double> _voltagePointsC = [];
+
+    /// <summary>三条电压趋势线（A/B/C 相），绑定 CartesianChart.Series。</summary>
+    public ObservableCollection<ISeries> VoltageSeries { get; }
+
+    /// <summary>横轴：滚动采样序号，隐藏刻度。</summary>
+    public Axis[] VoltageXAxes { get; }
+
+    /// <summary>纵轴：固定量程 180~260V。</summary>
+    public Axis[] VoltageYAxes { get; }
+
+    /// <summary>250V 上限警戒线（红色虚线水平参考线），绑定 CartesianChart.Sections。</summary>
+    public RectangularSection[] VoltageSections { get; }
+
+    /// <summary>三相电压是否一项都没勾选——为 true 时图表区显示空态提示（不报错）。</summary>
+    public bool IsVoltageChartUnsubscribed => !DataItems.Any(option =>
+        option.IsSelected && FindVoltageBuffer(option.Definition.DataId) is not null);
 
     // ---- 命令 ----
 
@@ -304,6 +411,7 @@ public sealed class MainWindowViewModel : BindableBase, IDisposable
         if (e.PropertyName == nameof(DataItemOption.IsSelected))
         {
             RaiseCommandStates();
+            RaisePropertyChanged(nameof(IsVoltageChartUnsubscribed));
         }
     }
 
@@ -359,6 +467,44 @@ public sealed class MainWindowViewModel : BindableBase, IDisposable
         }
 
         existing.Update(result, timestamp);
+
+        if (result.IsSuccess && result.Value is { } value)
+        {
+            AppendVoltagePoint(dataId, value);
+        }
+    }
+
+    /// <summary>
+    /// 命中三相电压 DI（显示序比对）时把值追加到对应趋势缓冲，超 <see cref="MaxVoltagePoints"/> 裁掉最旧点。
+    /// 本方法只会在 <see cref="ApplyReadResult"/>（已经 <see cref="IUiDispatcher"/> 调度到界面线程）内调用。
+    /// </summary>
+    private void AppendVoltagePoint(byte[] dataId, decimal value)
+    {
+        if (FindVoltageBuffer(dataId) is not { } buffer)
+        {
+            return;
+        }
+
+        buffer.Add((double)value);
+        while (buffer.Count > MaxVoltagePoints)
+        {
+            buffer.RemoveAt(0);
+        }
+    }
+
+    private ObservableCollection<double>? FindVoltageBuffer(byte[] dataId)
+    {
+        if (dataId.SequenceEqual(DataItemCatalog.VoltagePhaseA.DataId))
+        {
+            return _voltagePointsA;
+        }
+
+        if (dataId.SequenceEqual(DataItemCatalog.VoltagePhaseB.DataId))
+        {
+            return _voltagePointsB;
+        }
+
+        return dataId.SequenceEqual(DataItemCatalog.VoltagePhaseC.DataId) ? _voltagePointsC : null;
     }
 
     public void Dispose()

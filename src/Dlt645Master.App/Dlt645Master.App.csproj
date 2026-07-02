@@ -8,11 +8,15 @@
 
   <ItemGroup>
     <PackageReference Include="Prism.DryIoc" Version="9.0.537" />
+    <!-- slice-05：三相电压趋势图。锁定 2.0.4 正式版（MIT 许可证），禁用浮动版本。 -->
+    <PackageReference Include="LiveChartsCore.SkiaSharpView.WPF" Version="2.0.4" />
   </ItemGroup>
 
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
-    <TargetFramework>net8.0-windows</TargetFramework>
+    <!-- slice-05：TFM 指定 Windows 10 平台版本，使 SkiaSharp.Views.WPF / OpenTK 解析到现代 net8.0 目标
+         （否则回落 net462 兼容目标并产生 NU1701 警告）。 -->
+    <TargetFramework>net8.0-windows10.0.19041.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <UseWPF>true</UseWPF>

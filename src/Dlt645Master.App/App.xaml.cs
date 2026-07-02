@@ -5,12 +5,22 @@ using Dlt645Master.App.Views;
 using Dlt645Master.Core.Protocol;
 using Dlt645Master.Core.Services;
 using Dlt645Master.Core.Transport;
+using LiveChartsCore;
+using LiveChartsCore.SkiaSharpView;
 using Prism.Ioc;
 
 namespace Dlt645Master.App;
 
 public partial class App
 {
+    protected override void OnStartup(StartupEventArgs e)
+    {
+        // LiveCharts2 全局初始化：深色主题（图例/提示等默认画笔随深色 HMI），须在首个图表渲染前执行一次。
+        LiveCharts.Configure(config => config.AddDarkTheme());
+
+        base.OnStartup(e);
+    }
+
     protected override Window CreateShell()
     {
         return Container.Resolve<MainWindow>();
@@ -25,6 +35,6 @@ public partial class App
         containerRegistry.RegisterSingleton<IMeterPollingService, MeterPollingService>();
 
         // ITransport 需工厂构造（LoopbackTransport 依赖仿真从站 + 预置数据源，非容器可解析的参数）。
-        containerRegistry.RegisterSingleton<ITransport>(SimulatedTransportFactory.Create);
+        containerRegistry.RegisterSingleton<ITransport>(() => SimulatedTransportFactory.Create());
     }
 }
