@@ -6,9 +6,147 @@
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:prism="http://prismlibrary.com/"
     Title="DL/T645 电能表主站"
-    Width="800"
-    Height="450"
+    Width="960"
+    Height="560"
     prism:ViewModelLocator.AutoWireViewModel="True"
     mc:Ignorable="d">
-    <Grid />
+    <!--
+        slice-04 临时冒烟界面：仅用于验证视图模型接线（命令启停、实时读数、报文监视、统计）。
+        slice-05 将整体替换为深色 HMI 卡片墙 + 趋势图，届时本 Grid 全部作废。
+    -->
+    <Grid Margin="8">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <StackPanel Grid.Row="0" Orientation="Horizontal">
+            <TextBlock VerticalAlignment="Center" Text="电表地址" />
+            <TextBox
+                Width="150"
+                Margin="6,0"
+                VerticalContentAlignment="Center"
+                Text="{Binding MeterAddressText, UpdateSourceTrigger=PropertyChanged}" />
+            <Button
+                Margin="3,0"
+                Padding="10,4"
+                Command="{Binding ConnectCommand}"
+                Content="连接" />
+            <Button
+                Margin="3,0"
+                Padding="10,4"
+                Command="{Binding DisconnectCommand}"
+                Content="断开" />
+            <Button
+                Margin="3,0"
+                Padding="10,4"
+                Command="{Binding StartPollingCommand}"
+                Content="启动轮询" />
+            <Button
+                Margin="3,0"
+                Padding="10,4"
+                Command="{Binding StopPollingCommand}"
+                Content="停止轮询" />
+            <Button
+                Margin="3,0"
+                Padding="10,4"
+                Command="{Binding ReadOnceCommand}"
+                Content="单次读取" />
+        </StackPanel>
+
+        <Grid Grid.Row="1" Margin="0,8">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="200" />
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="1.4*" />
+            </Grid.ColumnDefinitions>
+
+            <GroupBox Grid.Column="0" Header="数据项">
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                    <ItemsControl ItemsSource="{Binding DataItems}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <CheckBox
+                                    Margin="2"
+                                    Content="{Binding Name}"
+                                    IsChecked="{Binding IsSelected}" />
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </ScrollViewer>
+            </GroupBox>
+
+            <GroupBox
+                Grid.Column="1"
+                Margin="8,0"
+                Header="实时读数">
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                    <ItemsControl ItemsSource="{Binding Readings}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Border
+                                    Margin="2"
+                                    Padding="6,4"
+                                    BorderBrush="#DDD"
+                                    BorderThickness="1">
+                                    <StackPanel Orientation="Horizontal">
+                                        <TextBlock Width="150" Text="{Binding ItemName}" />
+                                        <TextBlock
+                                            Width="90"
+                                            HorizontalAlignment="Right"
+                                            Text="{Binding Value}" />
+                                        <TextBlock
+                                            Width="50"
+                                            Margin="6,0"
+                                            Text="{Binding Unit}" />
+                                        <TextBlock Text="{Binding UpdateTime, StringFormat='HH:mm:ss'}" />
+                                    </StackPanel>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </ScrollViewer>
+            </GroupBox>
+
+            <GroupBox Grid.Column="2" Header="报文监视">
+                <ListBox
+                    FontFamily="Consolas"
+                    ItemsSource="{Binding FrameLog}"
+                    ScrollViewer.HorizontalScrollBarVisibility="Auto">
+                    <ListBox.ItemTemplate>
+                        <DataTemplate>
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Width="80" Text="{Binding Timestamp, StringFormat='HH:mm:ss.fff'}" />
+                                <TextBlock Width="36" Text="{Binding DirectionText}" />
+                                <TextBlock Text="{Binding HexText}" />
+                            </StackPanel>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+            </GroupBox>
+        </Grid>
+
+        <StatusBar Grid.Row="2">
+            <StatusBarItem>
+                <TextBlock Text="{Binding StatusMessage}" />
+            </StatusBarItem>
+            <Separator />
+            <StatusBarItem>
+                <TextBlock Text="{Binding TxCount, StringFormat='Tx={0}'}" />
+            </StatusBarItem>
+            <StatusBarItem>
+                <TextBlock Text="{Binding RxCount, StringFormat='Rx={0}'}" />
+            </StatusBarItem>
+            <StatusBarItem>
+                <TextBlock Text="{Binding TimeoutCount, StringFormat='超时={0}'}" />
+            </StatusBarItem>
+            <StatusBarItem>
+                <TextBlock Text="{Binding ErrorCount, StringFormat='错误={0}'}" />
+            </StatusBarItem>
+            <StatusBarItem>
+                <TextBlock Text="{Binding LastRoundTripMs, StringFormat='RTT={0:F1}ms'}" />
+            </StatusBarItem>
+        </StatusBar>
+    </Grid>
 </Window>

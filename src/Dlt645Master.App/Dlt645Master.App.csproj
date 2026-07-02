@@ -2,6 +2,8 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Dlt645Master.Core\Dlt645Master.Core.csproj" />
+    <!-- slice-04：App 需引用 Transport 以在 DI 装配仿真链路（LoopbackTransport + Dlt645MeterSlave）。 -->
+    <ProjectReference Include="..\Dlt645Master.Transport\Dlt645Master.Transport.csproj" />
   </ItemGroup>
 
   <ItemGroup>

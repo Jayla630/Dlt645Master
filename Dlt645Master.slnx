@@ -5,6 +5,7 @@
     <Project Path="src/Dlt645Master.Transport/Dlt645Master.Transport.csproj" />
   </Folder>
   <Folder Name="/tests/">
+    <Project Path="tests/Dlt645Master.App.Tests/Dlt645Master.App.Tests.csproj" />
     <Project Path="tests/Dlt645Master.Core.Tests/Dlt645Master.Core.Tests.csproj" />
     <Project Path="tests/Dlt645Master.Transport.Tests/Dlt645Master.Transport.Tests.csproj" />
   </Folder>
