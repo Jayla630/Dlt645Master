@@ -6,18 +6,30 @@ namespace Dlt645Master.Transport.Simulation;
 /// <summary>
 /// 波动数据源：包装一份基准值数据源（通常为预置演示值的 <see cref="FixedMeterDataSource"/>），
 /// 每次 <see cref="TryGetValue"/> 在上一次返回值附近做有界随机游走，使趋势图与卡片数值真正动起来。
-/// 波动规则按目录项单位区分：
-/// 电压类（单位 V）基准 ±2% 且始终大于 0；电能类（单位 kWh）只增不减、每次读取小步累加（模拟真实走字）；
-/// 其余（电流/功率/频率/功率因数等）基准 ±5%。
+/// 波动参数按 <see cref="DataItemCategory"/> 标定（slice-06），保证窄量程物理量不出荒谬数值：
+/// 频率 ±0.01 Hz 钳 [49.90, 50.10]；功率因数 ±0.005 钳 [0.93, 0.99]；电压 ±0.5 V 钳 [209, 235]；
+/// 电流/有功功率步长为基准 ±2%、带宽基准 ±5% 且恒大于 0；电能只增不减、每次读取小步累加（模拟真实走字）。
 /// 数值精度对齐目录项的小数位（BCD 编码会截断），游走步长不小于最小分辨率，保证连续读取值确实在变。
 /// 可注入 Random 种子以便测试可复现。
 /// </summary>
 public sealed class FluctuatingMeterDataSource : IMeterDataSource
 {
-    private const decimal VoltageAmplitude = 0.02m;
-    private const decimal DefaultAmplitude = 0.05m;
-    private const string VoltageUnit = "V";
-    private const string EnergyUnit = "kWh";
+    // ---- 标定表（类别 → 游走步长 / 硬钳制值域）。相对参数针对电流/功率（量级随基准而变），
+    // 绝对参数针对电压/频率/功率因数（电网物理量有固定合理区间）。----
+    private const decimal FrequencyStep = 0.01m;
+    private const decimal FrequencyMin = 49.90m;
+    private const decimal FrequencyMax = 50.10m;
+    private const decimal PowerFactorStep = 0.005m;
+    private const decimal PowerFactorMin = 0.93m;
+    private const decimal PowerFactorMax = 0.99m;
+    private const decimal VoltageStep = 0.5m;
+    private const decimal VoltageMin = 209m;
+    private const decimal VoltageMax = 235m;
+    private const decimal CurrentPowerStepRatio = 0.02m;
+    private const decimal CurrentPowerBandRatio = 0.05m;
+
+    /// <summary>未登记 DI 的兜底带宽比例（维持 slice-05 的 ±5% 行为）。</summary>
+    private const decimal DefaultBandRatio = 0.05m;
 
     private readonly IMeterDataSource _baseline;
     private readonly Random _random;
@@ -45,13 +57,35 @@ public sealed class FluctuatingMeterDataSource : IMeterDataSource
         decimal resolution = Resolution(definition?.DecimalPlaces ?? 2);
         decimal previous = FindCurrent(dataId) ?? baseValue;
 
-        decimal next = definition?.Unit == EnergyUnit
+        decimal next = definition?.Category == DataItemCategory.Energy
             ? NextEnergy(previous, resolution)
-            : NextWalk(previous, baseValue, resolution, definition?.Unit == VoltageUnit ? VoltageAmplitude : DefaultAmplitude);
+            : NextWalk(previous, ResolveProfile(definition?.Category, baseValue, resolution), resolution);
 
         SetCurrent(dataId, next);
         value = next;
         return true;
+    }
+
+    /// <summary>按类别查标定表，换算出本次游走的（步长, 下界, 上界）；统一保障步长不小于分辨率、下界恒正。</summary>
+    private static (decimal Step, decimal Lower, decimal Upper) ResolveProfile(
+        DataItemCategory? category, decimal baseValue, decimal resolution)
+    {
+        decimal magnitude = Math.Abs(baseValue);
+        (decimal step, decimal lower, decimal upper) = category switch
+        {
+            DataItemCategory.Frequency => (FrequencyStep, FrequencyMin, FrequencyMax),
+            DataItemCategory.PowerFactor => (PowerFactorStep, PowerFactorMin, PowerFactorMax),
+            DataItemCategory.Voltage => (VoltageStep, VoltageMin, VoltageMax),
+            DataItemCategory.Current or DataItemCategory.ActivePower =>
+                (magnitude * CurrentPowerStepRatio, magnitude * (1m - CurrentPowerBandRatio), magnitude * (1m + CurrentPowerBandRatio)),
+            // 未登记 DI（目录查不到类别）：带宽 ±5%、步长取带宽 1/4 的兜底行为。
+            _ => (magnitude * DefaultBandRatio / 4m, magnitude * (1m - DefaultBandRatio), magnitude * (1m + DefaultBandRatio)),
+        };
+
+        step = Math.Max(step, resolution);
+        lower = Math.Max(lower, resolution); // 硬钳制恒大于 0
+        upper = Math.Max(upper, lower);      // 基准过小（带宽塌缩）时退化为定值，绝不越带或变负
+        return (step, lower, upper);
     }
 
     /// <summary>电能走字：只增不减，每次累加 1~3 个最小分辨率。</summary>
@@ -60,26 +94,23 @@ public sealed class FluctuatingMeterDataSource : IMeterDataSource
 
     /// <summary>
     /// 有界随机游走：在上一次值附近小步移动（而非每次独立随机，曲线才像真实电网波动而不是噪声），
-    /// 并夹取到基准值 ±amplitude 的带内、保证大于 0。步长向上对齐到最小分辨率，若夹取后与上一次相同则
-    /// 在带内强制挪一格，保证连续读取值不同。
+    /// 越界截断到钳制值域内。若截断/舍入后与上一次相同，则随机选一侧在带内挪一格——方向必须随机，
+    /// 否则窄量程项（频率步长 = 分辨率，约半数步长被舍入吞掉）会被系统性推向一侧、贴边抖动。
     /// </summary>
-    private decimal NextWalk(decimal previous, decimal baseValue, decimal resolution, decimal amplitude)
+    private decimal NextWalk(decimal previous, (decimal Step, decimal Lower, decimal Upper) profile, decimal resolution)
     {
-        decimal band = Math.Abs(baseValue) * amplitude;
-        decimal lower = Math.Max(baseValue - band, resolution);
-        decimal upper = Math.Max(baseValue + band, lower); // 基准过小（带宽塌缩）时退化为定值，绝不越带或变负
+        (decimal step, decimal lower, decimal upper) = profile;
+        decimal signedStep = step * (decimal)(_random.NextDouble() * 2.0 - 1.0);
+        decimal next = RoundTo(Clamp(previous + signedStep, lower, upper), resolution);
 
-        // 单步幅度取带宽的 1/4 与最小分辨率的较大者，映射 [-1,1) 的随机数为有符号步长。
-        decimal maxStep = Math.Max(band / 4m, resolution);
-        decimal step = maxStep * (decimal)(_random.NextDouble() * 2.0 - 1.0);
-
-        decimal next = RoundTo(Clamp(previous + step, lower, upper), resolution);
         if (next == previous)
         {
-            // 贴边或步长被舍入吞掉时强制挪一格，方向选带内可行的一侧；两侧都不可行（带宽塌缩）则保持原值。
-            next = previous + resolution <= upper ? previous + resolution
-                : previous - resolution >= lower ? previous - resolution
-                : previous;
+            decimal up = previous + resolution;
+            decimal down = previous - resolution;
+            bool preferUp = _random.Next(2) == 0;
+            next = preferUp
+                ? (up <= upper ? up : down >= lower ? down : previous)
+                : (down >= lower ? down : up <= upper ? up : previous);
         }
 
         return next;

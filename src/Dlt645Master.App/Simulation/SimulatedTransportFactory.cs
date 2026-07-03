@@ -32,7 +32,7 @@ public static class SimulatedTransportFactory
             .Set(DataItemCatalog.CurrentPhaseB.DataId, 1.210m)
             .Set(DataItemCatalog.CurrentPhaseC.DataId, 1.198m)
             .Set(DataItemCatalog.TotalActivePower.DataId, 0.8123m)
-            .Set(DataItemCatalog.TotalPowerFactor.DataId, 0.998m)
+            .Set(DataItemCatalog.TotalPowerFactor.DataId, 0.96m) // 标定表基准，须落在钳制带 [0.93, 0.99] 内
             .Set(DataItemCatalog.GridFrequency.DataId, 50.00m);
 
         var dataSource = new FluctuatingMeterDataSource(baseline, seed);

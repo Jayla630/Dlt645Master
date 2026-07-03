@@ -21,4 +21,7 @@ public sealed class DataItemDefinition
     public required string Format { get; init; }
 
     public required string Unit { get; init; }
+
+    /// <summary>物理量类别，仿真波动标定与界面卡片分组的单一分类来源。</summary>
+    public required DataItemCategory Category { get; init; }
 }

@@ -32,6 +32,22 @@
     <SolidColorBrush x:Key="TextPrimaryBrush" Color="#E5E7EB" />
     <SolidColorBrush x:Key="TextSecondaryBrush" Color="#9CA3AF" />
 
+    <!--
+        相色（电力行业 A 黄 / B 绿 / C 红 惯例）：卡片色带与趋势图图例共用；
+        SkiaSharp 侧无法引用本字典，MainWindowViewModel 内的 SKColor 常量按相同值镜像，两处改色必须同步
+    -->
+    <SolidColorBrush x:Key="PhaseABrush" Color="#EAB308" />
+    <SolidColorBrush x:Key="PhaseBBrush" Color="#16A34A" />
+    <SolidColorBrush x:Key="PhaseCBrush" Color="#F87171" />
+
+    <!--  卡片分组色带（电压组用相色，其余组用组色；未登记 DI 用 OfflineBrush 中性灰）  -->
+    <SolidColorBrush x:Key="CategoryEnergyBrush" Color="#38BDF8" />
+    <SolidColorBrush x:Key="CategoryCurrentBrush" Color="#06B6D4" />
+    <SolidColorBrush x:Key="CategoryPowerBrush" Color="#A78BFA" />
+
+    <!--  窗控关闭按钮悬停（Windows 系统惯例红底白字）  -->
+    <SolidColorBrush x:Key="WindowCloseHoverBrush" Color="#E81123" />
+
     <!--  ============ 字体 ============  -->
 
     <!--  数值与报文一律等宽：优先 Cascadia Mono，回退 Consolas  -->
@@ -45,6 +61,14 @@
         <Setter Property="FontSize" Value="12" />
         <Setter Property="FontWeight" Value="SemiBold" />
         <Setter Property="Margin" Value="0,10,0,4" />
+    </Style>
+
+    <!--  卡片墙分组小节标题（电能 / 电压 / 电流 / 功率与频率）  -->
+    <Style x:Key="GroupHeaderTextStyle" TargetType="TextBlock">
+        <Setter Property="Foreground" Value="{StaticResource TextSecondaryBrush}" />
+        <Setter Property="FontSize" Value="12" />
+        <Setter Property="FontWeight" Value="SemiBold" />
+        <Setter Property="Margin" Value="7,8,0,2" />
     </Style>
 
     <!--  ============ Button ============  -->
@@ -129,6 +153,78 @@
                             <Setter Property="Foreground" Value="{StaticResource OfflineBrush}" />
                             <Setter TargetName="Bd" Property="Background" Value="{StaticResource InputBackgroundBrush}" />
                             <Setter TargetName="Bd" Property="BorderBrush" Value="{StaticResource ControlBorderBrush}" />
+                            <Setter TargetName="Bd" Property="Opacity" Value="0.55" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!--  ============ 窗控按钮（最小化 / 最大化还原 / 关闭，WindowChrome 标题栏用） ============  -->
+
+    <!--  Segoe MDL2 Assets 字形，透明底、悬停中性高亮；置于 CaptionHeight 区内须配合 IsHitTestVisibleInChrome  -->
+    <Style x:Key="WindowControlButtonStyle" TargetType="Button">
+        <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}" />
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="FontFamily" Value="Segoe MDL2 Assets" />
+        <Setter Property="FontSize" Value="10" />
+        <Setter Property="Width" Value="44" />
+        <Setter Property="VerticalAlignment" Value="Stretch" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <Border x:Name="Bd" Background="{TemplateBinding Background}">
+                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="Bd" Property="Background" Value="{StaticResource HoverBackgroundBrush}" />
+                        </Trigger>
+                        <Trigger Property="IsPressed" Value="True">
+                            <Setter TargetName="Bd" Property="Background" Value="{StaticResource PressedBackgroundBrush}" />
+                        </Trigger>
+                        <!--  键盘焦点提示  -->
+                        <Trigger Property="IsKeyboardFocused" Value="True">
+                            <Setter TargetName="Bd" Property="Background" Value="{StaticResource HoverBackgroundBrush}" />
+                        </Trigger>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter Property="Foreground" Value="{StaticResource OfflineBrush}" />
+                            <Setter TargetName="Bd" Property="Opacity" Value="0.55" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!--  关闭按钮：悬停/按下转系统惯例红底白字  -->
+    <Style
+        x:Key="WindowCloseButtonStyle"
+        BasedOn="{StaticResource WindowControlButtonStyle}"
+        TargetType="Button">
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <Border x:Name="Bd" Background="{TemplateBinding Background}">
+                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="Bd" Property="Background" Value="{StaticResource WindowCloseHoverBrush}" />
+                            <Setter Property="Foreground" Value="White" />
+                        </Trigger>
+                        <Trigger Property="IsPressed" Value="True">
+                            <Setter TargetName="Bd" Property="Background" Value="{StaticResource DangerBrush}" />
+                            <Setter Property="Foreground" Value="White" />
+                        </Trigger>
+                        <!--  键盘焦点提示  -->
+                        <Trigger Property="IsKeyboardFocused" Value="True">
+                            <Setter TargetName="Bd" Property="Background" Value="{StaticResource WindowCloseHoverBrush}" />
+                            <Setter Property="Foreground" Value="White" />
+                        </Trigger>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter Property="Foreground" Value="{StaticResource OfflineBrush}" />
                             <Setter TargetName="Bd" Property="Opacity" Value="0.55" />
                         </Trigger>
                     </ControlTemplate.Triggers>

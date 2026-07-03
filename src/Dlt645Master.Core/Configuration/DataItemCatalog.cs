@@ -17,6 +17,7 @@ public static class DataItemCatalog
         DecimalPlaces = 2,
         Format = "XXXXXX.XX",
         Unit = "kWh",
+        Category = DataItemCategory.Energy,
     };
 
     public static readonly DataItemDefinition ReverseActiveEnergy = new()
@@ -27,6 +28,7 @@ public static class DataItemCatalog
         DecimalPlaces = 2,
         Format = "XXXXXX.XX",
         Unit = "kWh",
+        Category = DataItemCategory.Energy,
     };
 
     public static readonly DataItemDefinition VoltagePhaseA = new()
@@ -37,6 +39,7 @@ public static class DataItemCatalog
         DecimalPlaces = 1,
         Format = "XXX.X",
         Unit = "V",
+        Category = DataItemCategory.Voltage,
     };
 
     public static readonly DataItemDefinition VoltagePhaseB = new()
@@ -47,6 +50,7 @@ public static class DataItemCatalog
         DecimalPlaces = 1,
         Format = "XXX.X",
         Unit = "V",
+        Category = DataItemCategory.Voltage,
     };
 
     public static readonly DataItemDefinition VoltagePhaseC = new()
@@ -57,6 +61,7 @@ public static class DataItemCatalog
         DecimalPlaces = 1,
         Format = "XXX.X",
         Unit = "V",
+        Category = DataItemCategory.Voltage,
     };
 
     public static readonly DataItemDefinition CurrentPhaseA = new()
@@ -67,6 +72,7 @@ public static class DataItemCatalog
         DecimalPlaces = 3,
         Format = "XXX.XXX",
         Unit = "A",
+        Category = DataItemCategory.Current,
     };
 
     public static readonly DataItemDefinition CurrentPhaseB = new()
@@ -77,6 +83,7 @@ public static class DataItemCatalog
         DecimalPlaces = 3,
         Format = "XXX.XXX",
         Unit = "A",
+        Category = DataItemCategory.Current,
     };
 
     public static readonly DataItemDefinition CurrentPhaseC = new()
@@ -87,6 +94,7 @@ public static class DataItemCatalog
         DecimalPlaces = 3,
         Format = "XXX.XXX",
         Unit = "A",
+        Category = DataItemCategory.Current,
     };
 
     public static readonly DataItemDefinition TotalActivePower = new()
@@ -97,6 +105,7 @@ public static class DataItemCatalog
         DecimalPlaces = 4,
         Format = "XX.XXXX",
         Unit = "kW",
+        Category = DataItemCategory.ActivePower,
     };
 
     public static readonly DataItemDefinition TotalPowerFactor = new()
@@ -107,6 +116,7 @@ public static class DataItemCatalog
         DecimalPlaces = 3,
         Format = "X.XXX",
         Unit = "",
+        Category = DataItemCategory.PowerFactor,
     };
 
     // TODO: DI 待核对 —— 任务书标注电网频率数据标识尚未在标准原文中核实，先按占位值实现，
@@ -119,6 +129,7 @@ public static class DataItemCatalog
         DecimalPlaces = 2,
         Format = "XX.XX",
         Unit = "Hz",
+        Category = DataItemCategory.Frequency,
     };
 
     public static readonly IReadOnlyList<DataItemDefinition> All =
