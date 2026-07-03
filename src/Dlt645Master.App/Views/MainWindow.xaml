@@ -8,7 +8,7 @@
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:prism="http://prismlibrary.com/"
     xmlns:scm="clr-namespace:System.ComponentModel;assembly=WindowsBase"
-    Title="DL/T645 电能表主站"
+    Title="DL/T645 电能表主站 v1.0"
     Width="1360"
     Height="820"
     MinWidth="1280"
@@ -165,6 +165,12 @@
                         FontSize="16"
                         FontWeight="Bold"
                         Text="DL/T645 电能表主站" />
+                    <TextBlock
+                        Margin="6,0,0,0"
+                        VerticalAlignment="Center"
+                        FontSize="11"
+                        Foreground="{StaticResource TextSecondaryBrush}"
+                        Text="v1.0" />
                     <Border
                         Margin="12,0,0,0"
                         Padding="8,2"
@@ -292,6 +298,11 @@
                             Margin="0,8,0,0"
                             Command="{Binding ReadOnceCommand}"
                             Content="单次读取" />
+                        <!--  导出读数：缓冲非空即可用，与连接状态无关（断开后仍可导出）  -->
+                        <Button
+                            Margin="0,8,0,0"
+                            Command="{Binding ExportReadingsCommand}"
+                            Content="导出读数 (CSV)" />
                     </StackPanel>
                 </ScrollViewer>
             </Border>
@@ -594,14 +605,24 @@
                             Text="报文监视" />
                         <StackPanel HorizontalAlignment="Right" Orientation="Horizontal">
                             <TextBlock
+                                VerticalAlignment="Center"
                                 FontSize="11"
                                 Foreground="{StaticResource WarningBrush}"
                                 Text="■ 发送" />
                             <TextBlock
                                 Margin="8,0,0,0"
+                                VerticalAlignment="Center"
                                 FontSize="11"
                                 Foreground="{StaticResource SuccessBrush}"
                                 Text="■ 接收" />
+                            <!--  导出当前监视窗口内容（上限 500 条）为纯文本  -->
+                            <Button
+                                Margin="10,0,0,0"
+                                Padding="8,2"
+                                VerticalAlignment="Center"
+                                Command="{Binding ExportFrameLogCommand}"
+                                Content="导出"
+                                FontSize="11" />
                         </StackPanel>
                     </DockPanel>
                     <!--

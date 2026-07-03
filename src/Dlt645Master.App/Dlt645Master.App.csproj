@@ -20,6 +20,11 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <UseWPF>true</UseWPF>
+    <!-- slice-07：程序集信息（产品名/版本/版权），随作品收官定版 1.0.0。 -->
+    <Product>DL/T645 电能表主站</Product>
+    <AssemblyTitle>DL/T645 电能表主站</AssemblyTitle>
+    <Version>1.0.0</Version>
+    <Copyright>Copyright © 2026 Jayla630</Copyright>
   </PropertyGroup>
 
 </Project>

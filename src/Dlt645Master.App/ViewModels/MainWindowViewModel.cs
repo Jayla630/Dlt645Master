@@ -1,5 +1,7 @@
 using System.Collections.ObjectModel;
 using System.ComponentModel;
+using System.IO;
+using System.Text;
 using Dlt645Master.App.Configuration;
 using Dlt645Master.App.Services;
 using Dlt645Master.Core.Configuration;
@@ -47,18 +49,30 @@ public sealed class MainWindowViewModel : BindableBase, IDisposable
     private readonly ITransport _transport;
     private readonly IMeterPollingService _service;
     private readonly IUiDispatcher _dispatcher;
+    private readonly ISaveFileDialogService _saveFileDialog;
 
-    public MainWindowViewModel(ITransport transport, IMeterPollingService service, IUiDispatcher dispatcher)
+    /// <summary>读数记录缓冲（导出 CSV 的数据源）：追加在后台事件线程、快照在界面线程，自身线程安全。</summary>
+    private readonly ReadingRecorder _readingRecorder = new();
+
+    public MainWindowViewModel(
+        ITransport transport,
+        IMeterPollingService service,
+        IUiDispatcher dispatcher,
+        ISaveFileDialogService saveFileDialog)
     {
         _transport = transport;
         _service = service;
         _dispatcher = dispatcher;
+        _saveFileDialog = saveFileDialog;
 
         ConnectCommand = new DelegateCommand(ExecuteConnect, () => !IsConnected);
         DisconnectCommand = new DelegateCommand(ExecuteDisconnect, () => IsConnected);
         StartPollingCommand = new DelegateCommand(ExecuteStartPolling, () => IsConnected && !IsPolling && HasSelectedDataItem);
         StopPollingCommand = new DelegateCommand(ExecuteStopPolling, () => IsPolling);
         ReadOnceCommand = new DelegateCommand(ExecuteReadOnce, () => IsConnected && !IsPolling);
+        // 导出命令的可执行条件只看缓冲是否非空——与连接/轮询状态无关，断开后仍可导出。
+        ExportReadingsCommand = new DelegateCommand(ExecuteExportReadings, () => _readingRecorder.Count > 0);
+        ExportFrameLogCommand = new DelegateCommand(ExecuteExportFrameLog, () => FrameLog.Count > 0);
 
         foreach (DataItemDefinition definition in DataItemCatalog.All)
         {
@@ -271,6 +285,10 @@ public sealed class MainWindowViewModel : BindableBase, IDisposable
 
     public DelegateCommand ReadOnceCommand { get; }
 
+    public DelegateCommand ExportReadingsCommand { get; }
+
+    public DelegateCommand ExportFrameLogCommand { get; }
+
     private bool HasSelectedDataItem => DataItems.Any(option => option.IsSelected);
 
     // ---- 命令实现（CanExecute 是第一道防线，命令体内仍 try/catch 兜底，不让异常打穿界面）----
@@ -383,6 +401,53 @@ public sealed class MainWindowViewModel : BindableBase, IDisposable
         }
     }
 
+    private void ExecuteExportReadings()
+    {
+        try
+        {
+            IReadOnlyList<ReadingRecord> records = _readingRecorder.Snapshot();
+            string? path = _saveFileDialog.PromptSavePath(
+                "CSV 文件 (*.csv)|*.csv",
+                $"读数记录_{DateTime.Now:yyyyMMdd_HHmmss}.csv");
+            if (path is null)
+            {
+                return; // 用户取消，不动状态栏
+            }
+
+            // UTF-8 必须带 BOM：无 BOM 的 UTF-8 在中文版 Excel 里直接打开会乱码。
+            File.WriteAllText(path, ReadingCsvFormatter.Format(records), new UTF8Encoding(encoderShouldEmitUTF8Identifier: true));
+            StatusMessage = $"已导出 {records.Count} 条读数记录：{path}";
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = $"导出读数失败：{ex.Message}";
+        }
+    }
+
+    private void ExecuteExportFrameLog()
+    {
+        try
+        {
+            // FrameLog 只在界面线程增删，导出命令也在界面线程发起，直接拷贝即可。
+            FrameLogEntry[] entries = [.. FrameLog];
+            string? path = _saveFileDialog.PromptSavePath(
+                "文本文件 (*.txt)|*.txt",
+                $"报文日志_{DateTime.Now:yyyyMMdd_HHmmss}.txt");
+            if (path is null)
+            {
+                return;
+            }
+
+            File.WriteAllText(path, FrameLogFormatter.Format(entries), new UTF8Encoding(encoderShouldEmitUTF8Identifier: true));
+            // 监视窗口封顶 500 条，导出的就是当前窗口内容——它是监视器不是黑匣子，提示里不掩饰。
+            StatusMessage = $"已导出 {entries.Length} 条报文（监视窗口上限 {MaxFrameLogEntries} 条）：{path}";
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = $"导出报文失败：{ex.Message}";
+        }
+    }
+
     private bool TryBuildAddress(out byte[] address)
     {
         if (MeterAddressParser.TryParse(MeterAddressText, out address))
@@ -418,7 +483,15 @@ public sealed class MainWindowViewModel : BindableBase, IDisposable
     // ---- 服务事件（三处全部经 IUiDispatcher.Post 回界面线程）----
 
     private void OnReadCompleted(object? sender, MeterReadResultEventArgs e)
-        => _dispatcher.Post(() => ApplyReadResult(e.Result, e.Timestamp));
+    {
+        // 记录追加不涉及界面元素，直接留在后台事件线程（缓冲自身线程安全）；命令可用态刷新须回界面线程。
+        _readingRecorder.Append(e.Result, e.Timestamp);
+        _dispatcher.Post(() =>
+        {
+            ApplyReadResult(e.Result, e.Timestamp);
+            ExportReadingsCommand.RaiseCanExecuteChanged();
+        });
+    }
 
     private void OnFrameTransferred(object? sender, FrameTransferredEventArgs e)
         => _dispatcher.Post(() =>
@@ -428,6 +501,8 @@ public sealed class MainWindowViewModel : BindableBase, IDisposable
             {
                 FrameLog.RemoveAt(0);
             }
+
+            ExportFrameLogCommand.RaiseCanExecuteChanged();
         });
 
     private void OnStatisticsChanged(object? sender, StatisticsChangedEventArgs e)

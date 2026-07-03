@@ -119,8 +119,8 @@ public static class DataItemCatalog
         Category = DataItemCategory.PowerFactor,
     };
 
-    // TODO: DI 待核对 —— 任务书标注电网频率数据标识尚未在标准原文中核实，先按占位值实现，
-    // 上线前必须对照 DL/T645-2007 附录 A.2 校正 DI、字节数与小数位。
+    // TODO: DI 待核对 —— 电网频率的数据标识尚未在标准原文中核实，先按占位值实现，
+    // 对接真表前必须对照 DL/T645-2007 附录 A.2 校正 DI、字节数与小数位。
     public static readonly DataItemDefinition GridFrequency = new()
     {
         Name = "电网频率",

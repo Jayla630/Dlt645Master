@@ -22,7 +22,7 @@ public class MainWindowViewModelSimulationTests
     {
         ITransport transport = SimulatedTransportFactory.Create();
         var service = new MeterPollingService(transport, new Dlt645Protocol());
-        var vm = new MainWindowViewModel(transport, service, new SyncUiDispatcher());
+        var vm = new MainWindowViewModel(transport, service, new SyncUiDispatcher(), new FakeSaveFileDialogService());
 
         try
         {

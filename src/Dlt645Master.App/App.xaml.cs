@@ -32,6 +32,7 @@ public partial class App
         // 真实串口模式（SerialPortTransport + 串口/波特率选择）留待 slice-05 随界面切换接入。
         containerRegistry.RegisterSingleton<IMeterProtocol, Dlt645Protocol>();
         containerRegistry.RegisterSingleton<IUiDispatcher, WpfUiDispatcher>();
+        containerRegistry.RegisterSingleton<ISaveFileDialogService, SaveFileDialogService>();
         containerRegistry.RegisterSingleton<IMeterPollingService, MeterPollingService>();
 
         // ITransport 需工厂构造（LoopbackTransport 依赖仿真从站 + 预置数据源，非容器可解析的参数）。

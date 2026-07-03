@@ -15,7 +15,7 @@ public class MainWindowViewModelChartTests
     private static (MainWindowViewModel Vm, FakePollingService Service, SyncUiDispatcher Dispatcher) Create()
     {
         var service = new FakePollingService();
-        var vm = new MainWindowViewModel(new FakeTransport(), service, new SyncUiDispatcher());
+        var vm = new MainWindowViewModel(new FakeTransport(), service, new SyncUiDispatcher(), new FakeSaveFileDialogService());
         return (vm, service, new SyncUiDispatcher());
     }
 

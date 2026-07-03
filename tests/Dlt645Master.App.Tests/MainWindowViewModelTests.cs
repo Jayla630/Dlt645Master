@@ -17,7 +17,7 @@ public class MainWindowViewModelTests
         var transport = new FakeTransport();
         var service = new FakePollingService();
         var dispatcher = new SyncUiDispatcher();
-        var vm = new MainWindowViewModel(transport, service, dispatcher);
+        var vm = new MainWindowViewModel(transport, service, dispatcher, new FakeSaveFileDialogService());
         return (vm, transport, service, dispatcher);
     }
 

@@ -430,5 +430,6 @@ FodyWeavers.xsd
 
 /CLAUDE.md
 /docs/task/
-# slice 运行截图（README 选材用，本地保留不入库）
+# slice 运行截图（README 选材用，本地保留不入库）；注意 * 不跨目录，
+# README 正式用图放 /docs/assets/ 下，天然不受本规则影响、随仓库入库
 /docs/*.png
