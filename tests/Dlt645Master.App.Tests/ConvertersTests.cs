@@ -9,28 +9,6 @@ public class ConvertersTests
 {
     private static readonly CultureInfo Culture = CultureInfo.InvariantCulture;
 
-    // ---- WidthToColumnsConverter：自适应列数 ----
-
-    [Theory]
-    [InlineData(0d, 1)]
-    [InlineData(239d, 1)]
-    [InlineData(480d, 2)]
-    [InlineData(1000d, 4)]
-    public void WidthToColumns_DefaultMinWidth_FloorsToAtLeastOneColumn(double width, int expected)
-    {
-        var converter = new WidthToColumnsConverter();
-
-        converter.Convert(width, typeof(int), null, Culture).Should().Be(expected);
-    }
-
-    [Fact]
-    public void WidthToColumns_ParameterOverridesMinItemWidth()
-    {
-        var converter = new WidthToColumnsConverter();
-
-        converter.Convert(600d, typeof(int), "200", Culture).Should().Be(3);
-    }
-
     // ---- VoltageToRatioConverter：对 250V 上限的占比 ----
 
     [Theory]

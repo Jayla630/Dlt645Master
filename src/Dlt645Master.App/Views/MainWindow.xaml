@@ -35,7 +35,6 @@
 
     <Window.Resources>
         <BooleanToVisibilityConverter x:Key="BoolToVisibility" />
-        <conv:WidthToColumnsConverter x:Key="WidthToColumns" />
         <conv:VoltageToRatioConverter x:Key="VoltageToRatio" />
         <conv:VoltageLevelConverter x:Key="VoltageLevel" />
 
@@ -305,204 +304,227 @@
                     <RowDefinition Height="1*" />
                 </Grid.RowDefinitions>
 
-                <!--  实时电参数卡片墙：四组小节 + 自适应列数吃满宽度；断开连接整墙转离线灰（保留末次数值）  -->
+                <!--
+                    实时电参数卡片墙：四组横排成等宽列、组内卡片纵向等分吃满高度——任意窗口尺寸下一屏尽览，
+                    刻意不套 ScrollViewer（MinWidth/MinHeight 已保证最小可用空间）；断开连接整墙转离线灰（保留末次数值）
+                -->
                 <Border
                     Grid.Row="0"
                     Padding="8"
                     Background="{StaticResource CardBackgroundBrush}"
                     CornerRadius="6">
-                    <ScrollViewer HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
-                        <ItemsControl ItemsSource="{Binding Source={StaticResource GroupedReadings}}">
-                            <ItemsControl.GroupStyle>
-                                <GroupStyle>
-                                    <GroupStyle.HeaderTemplate>
-                                        <DataTemplate>
-                                            <TextBlock Style="{StaticResource GroupHeaderTextStyle}" Text="{Binding Name}" />
-                                        </DataTemplate>
-                                    </GroupStyle.HeaderTemplate>
-                                    <!--  组面板保持默认纵向堆叠（GroupStyle.Panel 承载的是「组」，多列网格属于组内条目）  -->
-                                </GroupStyle>
-                            </ItemsControl.GroupStyle>
-                            <ItemsControl.ItemsPanel>
-                                <ItemsPanelTemplate>
-                                    <!--
-                                        分组时 ItemsPanel 承载组内叶子卡片：列数 = 卡片墙可用宽度 / 最小卡宽（250），
-                                        随窗口拉伸自适应，消灭右侧空白带
-                                    -->
-                                    <UniformGrid Columns="{Binding ActualWidth, RelativeSource={RelativeSource AncestorType=ItemsControl}, Converter={StaticResource WidthToColumns}, ConverterParameter=250}" />
-                                </ItemsPanelTemplate>
-                            </ItemsControl.ItemsPanel>
-                            <ItemsControl.ItemTemplate>
-                                <DataTemplate>
-                                    <!--
-                                        电参数卡片：左分类色带 + 项名 + 大号数值/单位/涨跌箭头 +（电压卡）250V 进度条 + 更新时间。
-                                        失败整卡转红；IsConnected=False 时整卡去饱和转离线灰（触发器写在各元素样式最后，压过失败红）
-                                    -->
-                                    <Border Margin="5">
-                                        <Border.Style>
-                                            <Style TargetType="Border">
-                                                <Setter Property="Background" Value="{StaticResource InputBackgroundBrush}" />
-                                                <Setter Property="BorderBrush" Value="{StaticResource ControlBorderHoverBrush}" />
-                                                <Setter Property="BorderThickness" Value="1" />
-                                                <Setter Property="CornerRadius" Value="6" />
-                                                <Style.Triggers>
-                                                    <DataTrigger Binding="{Binding IsSuccess}" Value="False">
-                                                        <Setter Property="BorderBrush" Value="{StaticResource DangerBrush}" />
-                                                    </DataTrigger>
-                                                    <DataTrigger Binding="{Binding DataContext.IsConnected, RelativeSource={RelativeSource AncestorType=Window}}" Value="False">
-                                                        <Setter Property="BorderBrush" Value="{StaticResource ControlBorderBrush}" />
-                                                        <Setter Property="Opacity" Value="0.7" />
-                                                    </DataTrigger>
-                                                </Style.Triggers>
-                                            </Style>
-                                        </Border.Style>
-                                        <Grid>
-                                            <Grid.ColumnDefinitions>
-                                                <ColumnDefinition Width="Auto" />
-                                                <ColumnDefinition Width="*" />
-                                            </Grid.ColumnDefinitions>
+                    <ItemsControl ItemsSource="{Binding Source={StaticResource GroupedReadings}}">
+                        <ItemsControl.GroupStyle>
+                            <GroupStyle>
+                                <!--
+                                    自定义 GroupItem 模板：DockPanel 让组标题置顶、ItemsPresenter 吃满剩余高度
+                                    （默认模板是 StackPanel，组内条目不会纵向拉伸）
+                                -->
+                                <GroupStyle.ContainerStyle>
+                                    <Style TargetType="GroupItem">
+                                        <Setter Property="Template">
+                                            <Setter.Value>
+                                                <ControlTemplate TargetType="GroupItem">
+                                                    <DockPanel>
+                                                        <TextBlock
+                                                            DockPanel.Dock="Top"
+                                                            Style="{StaticResource GroupHeaderTextStyle}"
+                                                            Text="{Binding Name}" />
+                                                        <ItemsPresenter />
+                                                    </DockPanel>
+                                                </ControlTemplate>
+                                            </Setter.Value>
+                                        </Setter>
+                                    </Style>
+                                </GroupStyle.ContainerStyle>
+                                <!--  组面板：单行 UniformGrid 把各组横排成等宽列（GroupStyle.Panel 承载的是「组」本身）  -->
+                                <GroupStyle.Panel>
+                                    <ItemsPanelTemplate>
+                                        <UniformGrid Rows="1" />
+                                    </ItemsPanelTemplate>
+                                </GroupStyle.Panel>
+                            </GroupStyle>
+                        </ItemsControl.GroupStyle>
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <!--  组内叶子卡片：单列 UniformGrid 纵向等分组列高度（分组时 ItemsPanel 承载的是组内条目）  -->
+                                <UniformGrid Columns="1" />
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <!--
+                                    电参数卡片：左分类色带 + 项名 + 大号数值/单位/涨跌箭头 +（电压卡）250V 进度条 + 更新时间。
+                                    失败整卡转红；IsConnected=False 时整卡去饱和转离线灰（触发器写在各元素样式最后，压过失败红）
+                                -->
+                                <Border Margin="4">
+                                    <Border.Style>
+                                        <Style TargetType="Border">
+                                            <Setter Property="Background" Value="{StaticResource InputBackgroundBrush}" />
+                                            <Setter Property="BorderBrush" Value="{StaticResource ControlBorderHoverBrush}" />
+                                            <Setter Property="BorderThickness" Value="1" />
+                                            <Setter Property="CornerRadius" Value="6" />
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding IsSuccess}" Value="False">
+                                                    <Setter Property="BorderBrush" Value="{StaticResource DangerBrush}" />
+                                                </DataTrigger>
+                                                <DataTrigger Binding="{Binding DataContext.IsConnected, RelativeSource={RelativeSource AncestorType=Window}}" Value="False">
+                                                    <Setter Property="BorderBrush" Value="{StaticResource ControlBorderBrush}" />
+                                                    <Setter Property="Opacity" Value="0.7" />
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </Border.Style>
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="*" />
+                                        </Grid.ColumnDefinitions>
 
-                                            <!--  分类色带：电压三卡用相色（与趋势图图例一致），其余用组色  -->
-                                            <Border
-                                                Grid.Column="0"
-                                                Width="4"
-                                                CornerRadius="6,0,0,6">
-                                                <Border.Style>
-                                                    <Style TargetType="Border">
-                                                        <Setter Property="Background" Value="{StaticResource OfflineBrush}" />
-                                                        <Style.Triggers>
-                                                            <DataTrigger Binding="{Binding AccentToken}" Value="PhaseA">
-                                                                <Setter Property="Background" Value="{StaticResource PhaseABrush}" />
-                                                            </DataTrigger>
-                                                            <DataTrigger Binding="{Binding AccentToken}" Value="PhaseB">
-                                                                <Setter Property="Background" Value="{StaticResource PhaseBBrush}" />
-                                                            </DataTrigger>
-                                                            <DataTrigger Binding="{Binding AccentToken}" Value="PhaseC">
-                                                                <Setter Property="Background" Value="{StaticResource PhaseCBrush}" />
-                                                            </DataTrigger>
-                                                            <DataTrigger Binding="{Binding AccentToken}" Value="Energy">
-                                                                <Setter Property="Background" Value="{StaticResource CategoryEnergyBrush}" />
-                                                            </DataTrigger>
-                                                            <DataTrigger Binding="{Binding AccentToken}" Value="Current">
-                                                                <Setter Property="Background" Value="{StaticResource CategoryCurrentBrush}" />
-                                                            </DataTrigger>
-                                                            <DataTrigger Binding="{Binding AccentToken}" Value="Power">
-                                                                <Setter Property="Background" Value="{StaticResource CategoryPowerBrush}" />
-                                                            </DataTrigger>
-                                                            <DataTrigger Binding="{Binding DataContext.IsConnected, RelativeSource={RelativeSource AncestorType=Window}}" Value="False">
-                                                                <Setter Property="Background" Value="{StaticResource OfflineBrush}" />
-                                                            </DataTrigger>
-                                                        </Style.Triggers>
-                                                    </Style>
-                                                </Border.Style>
-                                            </Border>
+                                        <!--  分类色带：电压三卡用相色（与趋势图图例一致），其余用组色  -->
+                                        <Border
+                                            Grid.Column="0"
+                                            Width="4"
+                                            CornerRadius="6,0,0,6">
+                                            <Border.Style>
+                                                <Style TargetType="Border">
+                                                    <Setter Property="Background" Value="{StaticResource OfflineBrush}" />
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding AccentToken}" Value="PhaseA">
+                                                            <Setter Property="Background" Value="{StaticResource PhaseABrush}" />
+                                                        </DataTrigger>
+                                                        <DataTrigger Binding="{Binding AccentToken}" Value="PhaseB">
+                                                            <Setter Property="Background" Value="{StaticResource PhaseBBrush}" />
+                                                        </DataTrigger>
+                                                        <DataTrigger Binding="{Binding AccentToken}" Value="PhaseC">
+                                                            <Setter Property="Background" Value="{StaticResource PhaseCBrush}" />
+                                                        </DataTrigger>
+                                                        <DataTrigger Binding="{Binding AccentToken}" Value="Energy">
+                                                            <Setter Property="Background" Value="{StaticResource CategoryEnergyBrush}" />
+                                                        </DataTrigger>
+                                                        <DataTrigger Binding="{Binding AccentToken}" Value="Current">
+                                                            <Setter Property="Background" Value="{StaticResource CategoryCurrentBrush}" />
+                                                        </DataTrigger>
+                                                        <DataTrigger Binding="{Binding AccentToken}" Value="Power">
+                                                            <Setter Property="Background" Value="{StaticResource CategoryPowerBrush}" />
+                                                        </DataTrigger>
+                                                        <DataTrigger Binding="{Binding DataContext.IsConnected, RelativeSource={RelativeSource AncestorType=Window}}" Value="False">
+                                                            <Setter Property="Background" Value="{StaticResource OfflineBrush}" />
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </Border.Style>
+                                        </Border>
 
-                                            <StackPanel Grid.Column="1" Margin="12,9">
+                                        <!--  内容垂直居中：组内卡片纵向等分后高度可能大于内容，居中比顶对齐更匀称  -->
+                                        <StackPanel
+                                            Grid.Column="1"
+                                            Margin="12,7"
+                                            VerticalAlignment="Center">
+                                            <TextBlock
+                                                FontSize="12"
+                                                Foreground="{StaticResource TextSecondaryBrush}"
+                                                Text="{Binding ItemName}" />
+                                            <StackPanel Margin="0,4,0,0" Orientation="Horizontal">
                                                 <TextBlock
+                                                    FontFamily="{StaticResource MonoFont}"
+                                                    FontSize="24"
+                                                    FontWeight="Bold"
+                                                    Text="{Binding Value, TargetNullValue=--}">
+                                                    <TextBlock.Style>
+                                                        <Style TargetType="TextBlock">
+                                                            <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}" />
+                                                            <Style.Triggers>
+                                                                <DataTrigger Binding="{Binding IsSuccess}" Value="False">
+                                                                    <Setter Property="Foreground" Value="{StaticResource DangerBrush}" />
+                                                                </DataTrigger>
+                                                                <DataTrigger Binding="{Binding DataContext.IsConnected, RelativeSource={RelativeSource AncestorType=Window}}" Value="False">
+                                                                    <Setter Property="Foreground" Value="{StaticResource OfflineBrush}" />
+                                                                </DataTrigger>
+                                                            </Style.Triggers>
+                                                        </Style>
+                                                    </TextBlock.Style>
+                                                </TextBlock>
+                                                <TextBlock
+                                                    Margin="6,0,0,4"
+                                                    VerticalAlignment="Bottom"
                                                     FontSize="12"
                                                     Foreground="{StaticResource TextSecondaryBrush}"
-                                                    Text="{Binding ItemName}" />
-                                                <StackPanel Margin="0,4,0,0" Orientation="Horizontal">
-                                                    <TextBlock
-                                                        FontFamily="{StaticResource MonoFont}"
-                                                        FontSize="26"
-                                                        FontWeight="Bold"
-                                                        Text="{Binding Value, TargetNullValue=--}">
-                                                        <TextBlock.Style>
-                                                            <Style TargetType="TextBlock">
-                                                                <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}" />
-                                                                <Style.Triggers>
-                                                                    <DataTrigger Binding="{Binding IsSuccess}" Value="False">
-                                                                        <Setter Property="Foreground" Value="{StaticResource DangerBrush}" />
-                                                                    </DataTrigger>
-                                                                    <DataTrigger Binding="{Binding DataContext.IsConnected, RelativeSource={RelativeSource AncestorType=Window}}" Value="False">
-                                                                        <Setter Property="Foreground" Value="{StaticResource OfflineBrush}" />
-                                                                    </DataTrigger>
-                                                                </Style.Triggers>
-                                                            </Style>
-                                                        </TextBlock.Style>
-                                                    </TextBlock>
-                                                    <TextBlock
-                                                        Margin="6,0,0,4"
-                                                        VerticalAlignment="Bottom"
-                                                        FontSize="12"
-                                                        Foreground="{StaticResource TextSecondaryBrush}"
-                                                        Text="{Binding Unit}" />
-                                                    <!--  涨跌箭头：升绿降黄（红在本界面语义是错误/超限，刻意不用）；电能类恒 Flat 不显示  -->
-                                                    <TextBlock
-                                                        Margin="8,0,0,5"
-                                                        VerticalAlignment="Bottom"
-                                                        FontSize="12">
-                                                        <TextBlock.Style>
-                                                            <Style TargetType="TextBlock">
-                                                                <Setter Property="Visibility" Value="Collapsed" />
-                                                                <Style.Triggers>
-                                                                    <DataTrigger Binding="{Binding Trend}" Value="Up">
-                                                                        <Setter Property="Visibility" Value="Visible" />
-                                                                        <Setter Property="Text" Value="▲" />
-                                                                        <Setter Property="Foreground" Value="{StaticResource SuccessBrush}" />
-                                                                    </DataTrigger>
-                                                                    <DataTrigger Binding="{Binding Trend}" Value="Down">
-                                                                        <Setter Property="Visibility" Value="Visible" />
-                                                                        <Setter Property="Text" Value="▼" />
-                                                                        <Setter Property="Foreground" Value="{StaticResource WarningBrush}" />
-                                                                    </DataTrigger>
-                                                                    <DataTrigger Binding="{Binding DataContext.IsConnected, RelativeSource={RelativeSource AncestorType=Window}}" Value="False">
-                                                                        <Setter Property="Foreground" Value="{StaticResource OfflineBrush}" />
-                                                                    </DataTrigger>
-                                                                </Style.Triggers>
-                                                            </Style>
-                                                        </TextBlock.Style>
-                                                    </TextBlock>
-                                                </StackPanel>
-
-                                                <!--  电压卡底部进度条：当前值对 250V 上限占比，接近上限转黄、越限转红（转换器 + 令牌，纯绑定）  -->
-                                                <Border
-                                                    Height="4"
-                                                    Margin="0,6,0,0"
-                                                    Background="{StaticResource WindowBackgroundBrush}"
-                                                    CornerRadius="2"
-                                                    Visibility="{Binding IsVoltage, Converter={StaticResource BoolToVisibility}}">
-                                                    <Rectangle
-                                                        HorizontalAlignment="Stretch"
-                                                        RadiusX="2"
-                                                        RadiusY="2"
-                                                        RenderTransformOrigin="0,0.5">
-                                                        <Rectangle.RenderTransform>
-                                                            <ScaleTransform ScaleX="{Binding Value, Converter={StaticResource VoltageToRatio}}" />
-                                                        </Rectangle.RenderTransform>
-                                                        <Rectangle.Style>
-                                                            <Style TargetType="Rectangle">
-                                                                <Setter Property="Fill" Value="{StaticResource SuccessBrush}" />
-                                                                <Style.Triggers>
-                                                                    <DataTrigger Binding="{Binding Value, Converter={StaticResource VoltageLevel}}" Value="High">
-                                                                        <Setter Property="Fill" Value="{StaticResource WarningBrush}" />
-                                                                    </DataTrigger>
-                                                                    <DataTrigger Binding="{Binding Value, Converter={StaticResource VoltageLevel}}" Value="Over">
-                                                                        <Setter Property="Fill" Value="{StaticResource DangerBrush}" />
-                                                                    </DataTrigger>
-                                                                    <DataTrigger Binding="{Binding DataContext.IsConnected, RelativeSource={RelativeSource AncestorType=Window}}" Value="False">
-                                                                        <Setter Property="Fill" Value="{StaticResource OfflineBrush}" />
-                                                                    </DataTrigger>
-                                                                </Style.Triggers>
-                                                            </Style>
-                                                        </Rectangle.Style>
-                                                    </Rectangle>
-                                                </Border>
-
+                                                    Text="{Binding Unit}" />
+                                                <!--  涨跌箭头：升绿降黄（红在本界面语义是错误/超限，刻意不用）；电能类恒 Flat 不显示  -->
                                                 <TextBlock
-                                                    Margin="0,3,0,0"
-                                                    FontFamily="{StaticResource MonoFont}"
-                                                    FontSize="11"
-                                                    Foreground="{StaticResource TextSecondaryBrush}"
-                                                    Text="{Binding UpdateTime, StringFormat='更新 {0:HH:mm:ss}'}" />
+                                                    Margin="8,0,0,5"
+                                                    VerticalAlignment="Bottom"
+                                                    FontSize="12">
+                                                    <TextBlock.Style>
+                                                        <Style TargetType="TextBlock">
+                                                            <Setter Property="Visibility" Value="Collapsed" />
+                                                            <Style.Triggers>
+                                                                <DataTrigger Binding="{Binding Trend}" Value="Up">
+                                                                    <Setter Property="Visibility" Value="Visible" />
+                                                                    <Setter Property="Text" Value="▲" />
+                                                                    <Setter Property="Foreground" Value="{StaticResource SuccessBrush}" />
+                                                                </DataTrigger>
+                                                                <DataTrigger Binding="{Binding Trend}" Value="Down">
+                                                                    <Setter Property="Visibility" Value="Visible" />
+                                                                    <Setter Property="Text" Value="▼" />
+                                                                    <Setter Property="Foreground" Value="{StaticResource WarningBrush}" />
+                                                                </DataTrigger>
+                                                                <DataTrigger Binding="{Binding DataContext.IsConnected, RelativeSource={RelativeSource AncestorType=Window}}" Value="False">
+                                                                    <Setter Property="Foreground" Value="{StaticResource OfflineBrush}" />
+                                                                </DataTrigger>
+                                                            </Style.Triggers>
+                                                        </Style>
+                                                    </TextBlock.Style>
+                                                </TextBlock>
                                             </StackPanel>
-                                        </Grid>
-                                    </Border>
-                                </DataTemplate>
-                            </ItemsControl.ItemTemplate>
-                        </ItemsControl>
-                    </ScrollViewer>
+
+                                            <!--  电压卡底部进度条：当前值对 250V 上限占比，接近上限转黄、越限转红（转换器 + 令牌，纯绑定）  -->
+                                            <Border
+                                                Height="4"
+                                                Margin="0,6,0,0"
+                                                Background="{StaticResource WindowBackgroundBrush}"
+                                                CornerRadius="2"
+                                                Visibility="{Binding IsVoltage, Converter={StaticResource BoolToVisibility}}">
+                                                <Rectangle
+                                                    HorizontalAlignment="Stretch"
+                                                    RadiusX="2"
+                                                    RadiusY="2"
+                                                    RenderTransformOrigin="0,0.5">
+                                                    <Rectangle.RenderTransform>
+                                                        <ScaleTransform ScaleX="{Binding Value, Converter={StaticResource VoltageToRatio}}" />
+                                                    </Rectangle.RenderTransform>
+                                                    <Rectangle.Style>
+                                                        <Style TargetType="Rectangle">
+                                                            <Setter Property="Fill" Value="{StaticResource SuccessBrush}" />
+                                                            <Style.Triggers>
+                                                                <DataTrigger Binding="{Binding Value, Converter={StaticResource VoltageLevel}}" Value="High">
+                                                                    <Setter Property="Fill" Value="{StaticResource WarningBrush}" />
+                                                                </DataTrigger>
+                                                                <DataTrigger Binding="{Binding Value, Converter={StaticResource VoltageLevel}}" Value="Over">
+                                                                    <Setter Property="Fill" Value="{StaticResource DangerBrush}" />
+                                                                </DataTrigger>
+                                                                <DataTrigger Binding="{Binding DataContext.IsConnected, RelativeSource={RelativeSource AncestorType=Window}}" Value="False">
+                                                                    <Setter Property="Fill" Value="{StaticResource OfflineBrush}" />
+                                                                </DataTrigger>
+                                                            </Style.Triggers>
+                                                        </Style>
+                                                    </Rectangle.Style>
+                                                </Rectangle>
+                                            </Border>
+
+                                            <TextBlock
+                                                Margin="0,3,0,0"
+                                                FontFamily="{StaticResource MonoFont}"
+                                                FontSize="11"
+                                                Foreground="{StaticResource TextSecondaryBrush}"
+                                                Text="{Binding UpdateTime, StringFormat='更新 {0:HH:mm:ss}'}" />
+                                        </StackPanel>
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
                 </Border>
 
                 <!--  三相电压趋势图 + 250V 警戒线  -->
