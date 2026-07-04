@@ -4,6 +4,9 @@
 
 ![运行演示](docs/assets/dlt645master-demo.svg)
 
+## 运行演示
+https://github.com/user-attachments/assets/e41ac0b8-cdba-490f-ab88-acab334b6b1f
+
 ![主界面：轮询运行中](docs/assets/main-window.png)
 
 ## 核心特性
