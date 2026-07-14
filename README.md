@@ -2,6 +2,12 @@
 
 基于 **DL/T645-2007** 规约的多功能电能表通信调试上位机（.NET 8 / WPF / MVVM）：通过 RS485 串口轮询电能表的电量、电压、电流、功率等数据，实时卡片墙 + 三相电压趋势图 + 报文监视，内置仿真从站——**没有真表也能克隆即跑**。
 
+> **📌 原创声明**
+> 本仓库为本项目的**唯一原始出处**，作者 [@Jayla630](https://github.com/Jayla630)，首次发布于 **2026-07-01**，完整开发脉络见本仓库提交历史（slice-01 → slice-07）。
+> 本项目采用 MIT 许可证，欢迎自由使用、修改与转载；唯一前提是**保留原作者署名并注明本仓库链接**——这是 MIT 许可证的明确条件。任何删除署名的搬运或转载，均已超出 MIT 授权范围。
+> **📌 Original Work**
+> This repository is the **sole original source** of this project, authored by [@Jayla630](https://github.com/Jayla630) and first published on **2026-07-01**; the full development history is visible in the commit log. Licensed under MIT — you are free to use, modify, and redistribute it, provided the **original author attribution and a link to this repository are retained**, as required by the MIT License. Any redistribution that strips this attribution falls outside the MIT grant.
+
 ![运行演示](docs/assets/dlt645master-demo.svg)
 
 ## 运行演示
@@ -75,27 +81,27 @@ dotnet run --project src/Dlt645Master.App
 
 默认串口参数：**2400 bps · 8 数据位 · 偶校验 · 1 停止位**（规约常用默认值，已内置）。
 
-| 数据项 | 数据标识 DI | 单位 |
-| ------ | ----------- | ---- |
-| 正向有功总电能 | 00 01 00 00 | kWh |
-| 反向有功总电能 | 00 02 00 00 | kWh |
-| A/B/C 相电压 | 02 01 01~03 00 | V |
-| A/B/C 相电流 | 02 02 01~03 00 | A |
-| 总有功功率 | 02 03 00 00 | kW |
-| 总功率因数 | 02 06 00 00 | — |
-| 电网频率 | 02 80 00 07 | Hz |
+| 数据项         | 数据标识 DI    | 单位 |
+| -------------- | -------------- | ---- |
+| 正向有功总电能 | 00 01 00 00    | kWh  |
+| 反向有功总电能 | 00 02 00 00    | kWh  |
+| A/B/C 相电压   | 02 01 01~03 00 | V    |
+| A/B/C 相电流   | 02 02 01~03 00 | A    |
+| 总有功功率     | 02 03 00 00    | kW   |
+| 总功率因数     | 02 06 00 00    | —    |
+| 电网频率       | 02 80 00 07    | Hz   |
 
 > DI 表以 DL/T645-2007 附录 A.2 为准；其中电网频率的 DI 为占位值，对接真表前需按标准原文核对。
 
 ## 技术栈与版本说明
 
-| 库 | 版本 | 锁定理由 |
-| --- | --- | --- |
-| .NET | 8.0 | 当前 LTS |
-| Prism.DryIoc | 9.0.537 | MVVM 基础设施 + DI 容器 |
-| LiveCharts2 (SkiaSharpView.WPF) | **2.0.4（锁定）** | 首个正式版，MIT 许可证；禁用浮动版本保证可重现构建 |
-| FluentAssertions | **7.2.2（锁定）** | 8.x 起改为 Xceed 非商业社区许可证，7.2.2 是最后一个 Apache-2.0 版本 |
-| xUnit | 2.9 | 测试框架 |
+| 库                              | 版本              | 锁定理由                                                            |
+| ------------------------------- | ----------------- | ------------------------------------------------------------------- |
+| .NET                            | 8.0               | 当前 LTS                                                            |
+| Prism.DryIoc                    | 9.0.537           | MVVM 基础设施 + DI 容器                                             |
+| LiveCharts2 (SkiaSharpView.WPF) | **2.0.4（锁定）** | 首个正式版，MIT 许可证；禁用浮动版本保证可重现构建                  |
+| FluentAssertions                | **7.2.2（锁定）** | 8.x 起改为 Xceed 非商业社区许可证，7.2.2 是最后一个 Apache-2.0 版本 |
+| xUnit                           | 2.9               | 测试框架                                                            |
 
 依赖许可证均为 MIT / Apache-2.0，与本仓库 MIT 许可证无传染冲突。
 
