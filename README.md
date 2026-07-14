@@ -5,6 +5,7 @@
 > **📌 原创声明**
 > 本仓库为本项目的**唯一原始出处**，作者 [@Jayla630](https://github.com/Jayla630)，首次发布于 **2026-07-01**，完整开发脉络见本仓库提交历史（slice-01 → slice-07）。
 > 本项目采用 MIT 许可证，欢迎自由使用、修改与转载；唯一前提是**保留原作者署名并注明本仓库链接**——这是 MIT 许可证的明确条件。任何删除署名的搬运或转载，均已超出 MIT 授权范围。
+
 > **📌 Original Work**
 > This repository is the **sole original source** of this project, authored by [@Jayla630](https://github.com/Jayla630) and first published on **2026-07-01**; the full development history is visible in the commit log. Licensed under MIT — you are free to use, modify, and redistribute it, provided the **original author attribution and a link to this repository are retained**, as required by the MIT License. Any redistribution that strips this attribution falls outside the MIT grant.
 
